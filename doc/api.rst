@@ -22,6 +22,8 @@ spikeinterface.core
     .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
+    .. autoclass:: Motion
+        :members:
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
@@ -141,7 +143,9 @@ Non-NEO-based
     .. autofunction:: read_mcsh5
     .. autofunction:: read_mda_recording
     .. autofunction:: read_mda_sorting
-    .. autofunction:: read_nwb
+    .. autofunction:: read_nwb_sorting
+    .. autofunction:: read_nwb_recording
+    .. autofunction:: read_nwb_timeseries
     .. autofunction:: read_phy
     .. autofunction:: read_shybrid_recording
     .. autofunction:: read_shybrid_sorting
@@ -166,7 +170,7 @@ spikeinterface.preprocessing
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_staturation
+    .. autofunction:: blank_saturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
@@ -277,8 +281,6 @@ spikeinterface.comparison
 
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
-    .. autoclass:: CollisionGTStudy
-    .. autoclass:: CorrelogramGTStudy
 
 
 
@@ -346,6 +348,9 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: load_model
+    .. autofunction:: auto_label_units
+    .. autofunction:: train_model
 
 Deprecated
 ~~~~~~~~~~
@@ -446,7 +451,6 @@ Motion Correction
 ~~~~~~~~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.motion
 
-    .. autoclass:: Motion
     .. autofunction:: estimate_motion
     .. autofunction:: interpolate_motion
     .. autofunction:: correct_motion_on_peaks
