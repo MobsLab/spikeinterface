@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import warnings
+from xml.dom.minidom import Attr
 import xml.etree.ElementTree as Etree
 from pathlib import Path
 from typing import Optional, Union
 
+from grpc import channel_ready_future
 import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
@@ -18,6 +20,7 @@ OptionalPathType = Optional[PathType]
 
 class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     """
+    WARNING: Custom class for MOBs lab
     Class for reading data from neuroscope
     Ref: http://neuroscope.sourceforge.net
 
@@ -67,11 +70,12 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
             dict(file_path=str(Path(file_path).absolute()), xml_file_path=xml_file_path)
         )
 
-        self.split_recording_by_channel_groups(
-            xml_file_path=xml_file_path
+        self.xml_file_path = (
+            xml_file_path
             if xml_file_path is not None
             else Path(file_path).with_suffix(".xml")
         )
+        self.split_recording_by_channel_groups()
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, xml_file_path=None):
@@ -102,7 +106,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
             dat_sampling_rate = int(sf.find("samplingRate").text)
             n_channels = int(sf.find("nChannels").text)
 
-        channel_groups, skipped_channels = [], []
+        channel_groups, skipped_channels, anatomycolors = [], [], {}
         for x in myroot.findall("anatomicalDescription"):
             for y in x.findall("channelGroups"):
                 for z in y.findall("group"):
@@ -115,21 +119,45 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
                     if chan_group:
                         channel_groups.append(np.array(chan_group))
 
+        for x in myroot.findall("neuroscope"):
+            for y in x.findall("channels"):
+                for i, z in enumerate(y.findall("channelColors")):
+                    try:
+                        channel_id = str(z.find("channel").text)
+                        color = z.find("color").text
+
+                    except AttributeError:
+                        channel_id = i 
+                        color = "#0080ff"
+                    anatomycolors[channel_id] = color
+
         discarded_channels = np.setdiff1d(
             np.arange(n_channels), np.concatenate(channel_groups)
         )
-        return channel_groups, discarded_channels
+        kept_channels = np.setdiff1d(
+            np.arange(n_channels),
+            np.concatenate([skipped_channels, discarded_channels]),
+        )
+        return channel_groups, kept_channels, discarded_channels, anatomycolors
 
-    def split_recording_by_channel_groups(self, xml_file_path):
+    def split_recording_by_channel_groups(self):
         n = self.get_num_channels()
         group_ids = np.full(n, -1, dtype=int)  # Initialize all positions to -1
 
-        channel_groups, discarded_channels = self._parse_xml_file(xml_file_path)
+        channel_groups, kept_channels, discarded_channels, colors = (
+            self._parse_xml_file(self.xml_file_path)
+        )
         for group_id, numbers in enumerate(channel_groups):
             group_ids[numbers] = (
                 group_id  # Assign group_id to the positions in `numbers`
             )
         self.set_property("group", group_ids)
+        discarded_ppty = np.full(n, False, dtype=bool)
+        discarded_ppty[discarded_channels] = True
+        self.set_property("discarded_channels", discarded_ppty)
+        self.set_property(
+            "colors", values=list(colors.values()), ids=list(colors.keys())
+        )
 
 
 class NeuroScopeSortingExtractor(BaseSorting):
